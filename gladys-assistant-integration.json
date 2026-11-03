@@ -1,0 +1,284 @@
+{
+  "manifest_version": 1,
+  "type": "device",
+  "name": "LOA - Car Lease Mileage",
+  "description": {
+    "en": "Track the mileage of a leased car (LOA/LLD): allowance, projection, extra-kilometre cost.",
+    "fr": "Suivi du kilométrage d'une voiture en LOA/LLD : forfait, projection, coût des km en trop."
+  },
+  "version": "0.1.0",
+  "docker_image": "ghcr.io/nagromdark/gladys-loa:0.1.0",
+  "gladys_version": ">=5.1.0",
+  "cover_image": "https://raw.githubusercontent.com/Nagromdark/gladys-loa/HEAD/cover.png",
+  "categories": ["services"],
+  "config_schema": [
+    {
+      "key": "intro",
+      "type": "section",
+      "label": { "en": "Your lease contract", "fr": "Votre contrat de location" },
+      "description": {
+        "en": "Copy the figures from your lease contract. Then enter the odometer from time to time (button below, dashboard widget or a scene): Gladys compares it with the allowance and projects the end of the contract.",
+        "fr": "Recopiez les chiffres de votre contrat. Saisissez ensuite le compteur de temps en temps (bouton ci-dessous, widget du tableau de bord ou scène) : Gladys le compare au forfait et projette la fin du contrat."
+      }
+    },
+    {
+      "key": "vehicle_name",
+      "type": "string",
+      "label": { "en": "Vehicle name", "fr": "Nom du véhicule" },
+      "placeholder": { "en": "e.g. Peugeot 308", "fr": "ex. Peugeot 308" },
+      "required": false,
+      "default": "Ma voiture"
+    },
+    {
+      "key": "contract_start",
+      "type": "string",
+      "label": {
+        "en": "Contract start (delivery date)",
+        "fr": "Début du contrat (date de livraison)"
+      },
+      "description": {
+        "en": "Format YYYY-MM-DD.",
+        "fr": "Format AAAA-MM-JJ."
+      },
+      "placeholder": { "en": "e.g. 2025-03-15", "fr": "ex. 2025-03-15" },
+      "required": true
+    },
+    {
+      "key": "duration_months",
+      "type": "number",
+      "label": { "en": "Duration (months)", "fr": "Durée (mois)" },
+      "required": true,
+      "default": 36,
+      "min": 1,
+      "max": 120
+    },
+    {
+      "key": "allowance_km",
+      "type": "number",
+      "label": { "en": "Mileage allowance (km)", "fr": "Kilométrage prévu au contrat (km)" },
+      "description": {
+        "en": "For the whole contract, not per year.",
+        "fr": "Pour toute la durée du contrat, pas par an."
+      },
+      "required": true,
+      "default": 60000,
+      "min": 1,
+      "max": 1000000
+    },
+    {
+      "key": "start_km",
+      "type": "number",
+      "label": { "en": "Odometer at delivery (km)", "fr": "Compteur à la livraison (km)" },
+      "required": false,
+      "default": 0,
+      "min": 0,
+      "max": 1000000
+    },
+    {
+      "key": "extra_km_price",
+      "type": "number",
+      "label": { "en": "Price per extra km (€)", "fr": "Prix du km supplémentaire (€)" },
+      "description": {
+        "en": "Written in the contract, usually between 0.05 and 0.20 €.",
+        "fr": "Indiqué au contrat, en général entre 0,05 et 0,20 €."
+      },
+      "placeholder": { "en": "e.g. 0.12", "fr": "ex. 0.12" },
+      "required": true,
+      "min": 0,
+      "max": 10
+    }
+  ],
+  "actions": [
+    {
+      "key": "record_reading",
+      "label": { "en": "Record the odometer", "fr": "Saisir le compteur" },
+      "fields": [
+        {
+          "key": "km",
+          "type": "number",
+          "label": { "en": "Odometer (km)", "fr": "Compteur (km)" },
+          "required": true,
+          "min": 0,
+          "max": 2000000
+        }
+      ]
+    },
+    {
+      "key": "show_summary",
+      "label": { "en": "Show the summary", "fr": "Afficher le bilan" }
+    }
+  ],
+  "scene_actions": [
+    {
+      "key": "record_reading",
+      "label": {
+        "en": "Record the leased car odometer",
+        "fr": "Enregistrer le compteur de la LOA"
+      },
+      "description": {
+        "en": "Records an odometer reading, e.g. one read from a connected car by another integration.",
+        "fr": "Enregistre un relevé du compteur, par exemple lu sur une voiture connectée par une autre intégration."
+      },
+      "timeout_seconds": 15,
+      "fields": [
+        {
+          "key": "km",
+          "type": "number",
+          "label": { "en": "Odometer (km)", "fr": "Compteur (km)" },
+          "required": true,
+          "min": 0,
+          "max": 2000000
+        },
+        {
+          "key": "language",
+          "type": "select",
+          "label": { "en": "Summary language", "fr": "Langue du bilan" },
+          "required": false,
+          "default": "fr",
+          "options": [
+            { "value": "fr", "label": { "en": "French", "fr": "Français" } },
+            { "value": "en", "label": { "en": "English", "fr": "Anglais" } }
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "key": "odometer",
+          "type": "number",
+          "label": { "en": "Odometer", "fr": "Compteur" }
+        },
+        {
+          "key": "expected_odometer",
+          "type": "number",
+          "label": { "en": "Expected odometer", "fr": "Compteur prévu" }
+        },
+        {
+          "key": "km_delta",
+          "type": "number",
+          "label": { "en": "Km vs expected", "fr": "Écart au prévu (km)" }
+        },
+        {
+          "key": "remaining_km",
+          "type": "number",
+          "label": { "en": "Km left in the allowance", "fr": "Km restants au forfait" }
+        },
+        {
+          "key": "monthly_budget_km",
+          "type": "number",
+          "label": { "en": "Budget per month (km)", "fr": "Budget par mois (km)" }
+        },
+        {
+          "key": "projected_end_odometer",
+          "type": "number",
+          "label": { "en": "Projected final odometer", "fr": "Compteur projeté en fin de contrat" }
+        },
+        {
+          "key": "projected_overage_km",
+          "type": "number",
+          "label": { "en": "Projected extra km", "fr": "Dépassement projeté (km)" }
+        },
+        {
+          "key": "projected_overage_cost",
+          "type": "number",
+          "label": { "en": "Projected extra cost (€)", "fr": "Surcoût projeté (€)" }
+        },
+        {
+          "key": "days_remaining",
+          "type": "number",
+          "label": { "en": "Days left", "fr": "Jours restants" }
+        },
+        {
+          "key": "summary",
+          "type": "string",
+          "label": { "en": "Summary", "fr": "Bilan" }
+        }
+      ]
+    },
+    {
+      "key": "get_summary",
+      "label": { "en": "Get the lease summary", "fr": "Obtenir le bilan de la LOA" },
+      "description": {
+        "en": "The lease figures and a ready-made sentence, e.g. for a monthly message.",
+        "fr": "Les chiffres de la LOA et une phrase toute faite, par exemple pour un message mensuel."
+      },
+      "timeout_seconds": 10,
+      "fields": [
+        {
+          "key": "language",
+          "type": "select",
+          "label": { "en": "Summary language", "fr": "Langue du bilan" },
+          "required": false,
+          "default": "fr",
+          "options": [
+            { "value": "fr", "label": { "en": "French", "fr": "Français" } },
+            { "value": "en", "label": { "en": "English", "fr": "Anglais" } }
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "key": "odometer",
+          "type": "number",
+          "label": { "en": "Odometer", "fr": "Compteur" }
+        },
+        {
+          "key": "expected_odometer",
+          "type": "number",
+          "label": { "en": "Expected odometer", "fr": "Compteur prévu" }
+        },
+        {
+          "key": "km_delta",
+          "type": "number",
+          "label": { "en": "Km vs expected", "fr": "Écart au prévu (km)" }
+        },
+        {
+          "key": "remaining_km",
+          "type": "number",
+          "label": { "en": "Km left in the allowance", "fr": "Km restants au forfait" }
+        },
+        {
+          "key": "monthly_budget_km",
+          "type": "number",
+          "label": { "en": "Budget per month (km)", "fr": "Budget par mois (km)" }
+        },
+        {
+          "key": "projected_end_odometer",
+          "type": "number",
+          "label": { "en": "Projected final odometer", "fr": "Compteur projeté en fin de contrat" }
+        },
+        {
+          "key": "projected_overage_km",
+          "type": "number",
+          "label": { "en": "Projected extra km", "fr": "Dépassement projeté (km)" }
+        },
+        {
+          "key": "projected_overage_cost",
+          "type": "number",
+          "label": { "en": "Projected extra cost (€)", "fr": "Surcoût projeté (€)" }
+        },
+        {
+          "key": "days_remaining",
+          "type": "number",
+          "label": { "en": "Days left", "fr": "Jours restants" }
+        },
+        {
+          "key": "summary",
+          "type": "string",
+          "label": { "en": "Summary", "fr": "Bilan" }
+        }
+      ]
+    }
+  ],
+  "widgets": [
+    {
+      "key": "lease_status",
+      "label": { "en": "Car lease", "fr": "LOA voiture" },
+      "description": {
+        "en": "Odometer against the allowance, projection, extra cost, and a button to record a reading.",
+        "fr": "Compteur face au forfait, projection, surcoût, et un bouton pour saisir un relevé."
+      },
+      "icon": "truck",
+      "action_timeout_seconds": 15
+    }
+  ]
+}
